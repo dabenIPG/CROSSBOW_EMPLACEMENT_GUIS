@@ -69,7 +69,7 @@ namespace CROSSBOW_EMPLACEMENT_GUIS
         {
             double mylatitude = Convert.ToDouble(txt_lat.Text);  //34.459541;
             double mylongitude = Convert.ToDouble(txt_lng.Text);  //-86.432505;
-            double myelevation = Convert.ToDouble(txt_lat.Text);  //173;
+            double myelevation = Convert.ToDouble(txt_alt.Text);  //173;
             GMap.NET.GMaps.Instance.Mode = GMap.NET.AccessMode.ServerAndCache;
             gMapControl1.MapProvider = GMap.NET.MapProviders.GoogleTerrainMapProvider.Instance;
             gMapControl1.Position = new GMap.NET.PointLatLng(mylatitude, mylongitude);

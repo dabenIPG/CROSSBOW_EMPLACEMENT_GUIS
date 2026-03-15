@@ -46,7 +46,6 @@
             tabPage3 = new TabPage();
             txt_TargetIP = new TextBox();
             chk_SendData = new CheckBox();
-            chk_UDP_Transmit = new CheckBox();
             statusStrip1 = new StatusStrip();
             tss_LoRaMsg = new ToolStripStatusLabel();
             tss_UTCTime = new ToolStripStatusLabel();
@@ -65,12 +64,24 @@
             timer1 = new System.Windows.Forms.Timer(components);
             timUDP = new System.Windows.Forms.Timer(components);
             txtCueResponse = new TextBox();
+            tabPage4 = new TabPage();
+            txt_HyperionIP = new TextBox();
+            chk_SensorSim = new CheckBox();
+            chk_HyperionSniff = new CheckBox();
+            btn_ResetCounters = new Button();
+            lbl_PacketsSent = new Label();
+            lbl_PacketsRx = new Label();
+            lbl_PacketsPass = new Label();
+            lbl_PacketsFail = new Label();
+            lstVerifyLog = new ListBox();
+            timer_SnifferStats = new System.Windows.Forms.Timer(components);
             tabControl1.SuspendLayout();
             tabPage1.SuspendLayout();
             tabPage2.SuspendLayout();
             tabPage3.SuspendLayout();
             statusStrip1.SuspendLayout();
             groupBox2.SuspendLayout();
+            tabPage4.SuspendLayout();
             SuspendLayout();
             // 
             // tabControl1
@@ -78,6 +89,7 @@
             tabControl1.Controls.Add(tabPage1);
             tabControl1.Controls.Add(tabPage2);
             tabControl1.Controls.Add(tabPage3);
+            tabControl1.Controls.Add(tabPage4);
             tabControl1.Location = new Point(3, 2);
             tabControl1.Name = "tabControl1";
             tabControl1.SelectedIndex = 0;
@@ -217,7 +229,6 @@
             // 
             tabPage3.Controls.Add(txt_TargetIP);
             tabPage3.Controls.Add(chk_SendData);
-            tabPage3.Controls.Add(chk_UDP_Transmit);
             tabPage3.Location = new Point(4, 24);
             tabPage3.Name = "tabPage3";
             tabPage3.Size = new Size(256, 164);
@@ -243,17 +254,6 @@
             chk_SendData.Text = "CONNECT";
             chk_SendData.UseVisualStyleBackColor = true;
             chk_SendData.CheckedChanged += chk_SendData_CheckedChanged;
-            // 
-            // chk_UDP_Transmit
-            // 
-            chk_UDP_Transmit.AutoSize = true;
-            chk_UDP_Transmit.Location = new Point(11, 84);
-            chk_UDP_Transmit.Name = "chk_UDP_Transmit";
-            chk_UDP_Transmit.Size = new Size(82, 19);
-            chk_UDP_Transmit.TabIndex = 22;
-            chk_UDP_Transmit.Text = "TRANSMIT";
-            chk_UDP_Transmit.UseVisualStyleBackColor = true;
-            chk_UDP_Transmit.CheckedChanged += chk_UDP_Transmit_CheckedChanged;
             // 
             // statusStrip1
             // 
@@ -424,14 +424,123 @@
             txtCueResponse.Location = new Point(3, 447);
             txtCueResponse.Multiline = true;
             txtCueResponse.Name = "txtCueResponse";
-            txtCueResponse.Size = new Size(260, 132);
+            txtCueResponse.Size = new Size(260, 74);
             txtCueResponse.TabIndex = 45;
+            // 
+            // tabPage4
+            // 
+            tabPage4.Controls.Add(lbl_PacketsFail);
+            tabPage4.Controls.Add(lbl_PacketsPass);
+            tabPage4.Controls.Add(lbl_PacketsRx);
+            tabPage4.Controls.Add(lbl_PacketsSent);
+            tabPage4.Controls.Add(btn_ResetCounters);
+            tabPage4.Controls.Add(chk_HyperionSniff);
+            tabPage4.Controls.Add(chk_SensorSim);
+            tabPage4.Controls.Add(txt_HyperionIP);
+            tabPage4.Location = new Point(4, 24);
+            tabPage4.Name = "tabPage4";
+            tabPage4.Padding = new Padding(3);
+            tabPage4.Size = new Size(256, 164);
+            tabPage4.TabIndex = 3;
+            tabPage4.Text = "Verify";
+            tabPage4.UseVisualStyleBackColor = true;
+            // 
+            // txt_HyperionIP
+            // 
+            txt_HyperionIP.Location = new Point(6, 6);
+            txt_HyperionIP.Name = "txt_HyperionIP";
+            txt_HyperionIP.Size = new Size(100, 23);
+            txt_HyperionIP.TabIndex = 0;
+            txt_HyperionIP.Text = "127.0.0.1";
+            // 
+            // chk_SensorSim
+            // 
+            chk_SensorSim.AutoSize = true;
+            chk_SensorSim.Location = new Point(6, 35);
+            chk_SensorSim.Name = "chk_SensorSim";
+            chk_SensorSim.Size = new Size(128, 19);
+            chk_SensorSim.TabIndex = 1;
+            chk_SensorSim.Text = "Inject → HYPERION";
+            chk_SensorSim.UseVisualStyleBackColor = true;
+            chk_SensorSim.CheckedChanged += chk_SensorSim_CheckedChanged;
+            // 
+            // chk_HyperionSniff
+            // 
+            chk_HyperionSniff.AutoSize = true;
+            chk_HyperionSniff.Location = new Point(6, 60);
+            chk_HyperionSniff.Name = "chk_HyperionSniff";
+            chk_HyperionSniff.Size = new Size(123, 19);
+            chk_HyperionSniff.TabIndex = 2;
+            chk_HyperionSniff.Text = "Sniff ← HYPERION";
+            chk_HyperionSniff.UseVisualStyleBackColor = true;
+            chk_HyperionSniff.CheckedChanged += chk_HyperionSniff_CheckedChanged;
+            // 
+            // btn_ResetCounters
+            // 
+            btn_ResetCounters.Location = new Point(112, 6);
+            btn_ResetCounters.Name = "btn_ResetCounters";
+            btn_ResetCounters.Size = new Size(56, 23);
+            btn_ResetCounters.TabIndex = 3;
+            btn_ResetCounters.Text = "Reset";
+            btn_ResetCounters.UseVisualStyleBackColor = true;
+            btn_ResetCounters.Click += btn_ResetCounters_Click;
+            // 
+            // lbl_PacketsSent
+            // 
+            lbl_PacketsSent.AutoSize = true;
+            lbl_PacketsSent.Location = new Point(7, 87);
+            lbl_PacketsSent.Name = "lbl_PacketsSent";
+            lbl_PacketsSent.Size = new Size(42, 15);
+            lbl_PacketsSent.TabIndex = 4;
+            lbl_PacketsSent.Text = "Sent: 0";
+            // 
+            // lbl_PacketsRx
+            // 
+            lbl_PacketsRx.AutoSize = true;
+            lbl_PacketsRx.Location = new Point(8, 113);
+            lbl_PacketsRx.Name = "lbl_PacketsRx";
+            lbl_PacketsRx.Size = new Size(32, 15);
+            lbl_PacketsRx.TabIndex = 5;
+            lbl_PacketsRx.Text = "Rx: 0";
+            // 
+            // lbl_PacketsPass
+            // 
+            lbl_PacketsPass.AutoSize = true;
+            lbl_PacketsPass.Location = new Point(100, 90);
+            lbl_PacketsPass.Name = "lbl_PacketsPass";
+            lbl_PacketsPass.Size = new Size(42, 15);
+            lbl_PacketsPass.TabIndex = 6;
+            lbl_PacketsPass.Text = "Pass: 0";
+            // 
+            // lbl_PacketsFail
+            // 
+            lbl_PacketsFail.AutoSize = true;
+            lbl_PacketsFail.Location = new Point(102, 119);
+            lbl_PacketsFail.Name = "lbl_PacketsFail";
+            lbl_PacketsFail.Size = new Size(37, 15);
+            lbl_PacketsFail.TabIndex = 7;
+            lbl_PacketsFail.Text = "Fail: 0";
+            // 
+            // lstVerifyLog
+            // 
+            lstVerifyLog.FormattingEnabled = true;
+            lstVerifyLog.HorizontalScrollbar = true;
+            lstVerifyLog.ItemHeight = 15;
+            lstVerifyLog.Location = new Point(3, 527);
+            lstVerifyLog.Name = "lstVerifyLog";
+            lstVerifyLog.Size = new Size(260, 49);
+            lstVerifyLog.TabIndex = 46;
+            // 
+            // timer_SnifferStats
+            // 
+            timer_SnifferStats.Tick += timer_SnifferStats_Tick;
             // 
             // frmCUESim
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(951, 623);
+            Controls.Add(lstVerifyLog);
             Controls.Add(txtCueResponse);
             Controls.Add(groupBox2);
             Controls.Add(gMap);
@@ -439,6 +548,7 @@
             Controls.Add(tabControl1);
             Name = "frmCUESim";
             Text = "CROSSBOW: CUE SIMULATOR";
+            FormClosing += frmCUESim_FormClosing;
             Load += frmCUESim_Load;
             tabControl1.ResumeLayout(false);
             tabPage1.ResumeLayout(false);
@@ -451,6 +561,8 @@
             statusStrip1.PerformLayout();
             groupBox2.ResumeLayout(false);
             groupBox2.PerformLayout();
+            tabPage4.ResumeLayout(false);
+            tabPage4.PerformLayout();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -471,7 +583,6 @@
         private TabPage tabPage3;
         private TextBox txt_TargetIP;
         private CheckBox chk_SendData;
-        private CheckBox chk_UDP_Transmit;
         private StatusStrip statusStrip1;
         private GMap.NET.WindowsForms.GMapControl gMap;
         private TextBox txt_radius;
@@ -493,5 +604,16 @@
         private ToolStripStatusLabel tss_LoRaMsg;
         private System.Windows.Forms.Timer timUDP;
         private TextBox txtCueResponse;
+        private TabPage tabPage4;
+        private CheckBox chk_HyperionSniff;
+        private CheckBox chk_SensorSim;
+        private TextBox txt_HyperionIP;
+        private Button btn_ResetCounters;
+        private Label lbl_PacketsRx;
+        private Label lbl_PacketsSent;
+        private Label lbl_PacketsFail;
+        private Label lbl_PacketsPass;
+        private ListBox lstVerifyLog;
+        private System.Windows.Forms.Timer timer_SnifferStats;
     }
 }
