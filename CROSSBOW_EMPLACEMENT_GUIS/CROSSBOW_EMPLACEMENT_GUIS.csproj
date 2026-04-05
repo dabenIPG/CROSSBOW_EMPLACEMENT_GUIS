@@ -27,6 +27,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\CROSSBOW_COMMON_CLASS_LIBRARY\CROSSBOW_COMMON_CLASS_LIBRARY\CROSSBOW_COMMON_CLASS_LIBRARY.csproj" />
+    <ProjectReference Include="..\..\CROSSBOW_COMMON_CLASS_LIBRARY\CROSSBOW_COMMON_CLASS_LIBRARY\CROSSBOW_COMMON_CLASS_LIBRARY.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -4,11 +4,13 @@
 // listener on UDP:10032. HYPERION ingests these identically to a real LoRa
 // sensor via RADAR.ParseMsg → trackMSG(payload, "LORA", vzPositiveUp=false).
 //
-// Port strategy (single-machine):
-//   Port 10032 — HYPERION aLORA listen (SensorSim sends here)
-//   Port 10009 — HyperionSniffer listen (fake THEIA — no conflict)
-//   Port 10009 — HYPERION aRADAR listen (separate bind, no conflict with sniffer
-//                because sniffer binds on a different local IP or loopback)
+// Port strategy (15000 block — EXT_OPS tier):
+//   Port 15001 — HYPERION aRADAR sensor input  (SensorSim sends here)
+//   Port 15002 — HYPERION aLORA sensor input
+//   Port 15009 — THEIA CueReceiver             (no conflict)
+//   Port 15010 — HYPERION CUE output → THEIA   (no conflict)
+//
+// Single-machine testing is clean — all ports distinct, no rebind conflicts.
 //
 // ⚠ vz sign: aLORA uses vzPositiveUp=false — HYPERION negates received vz.
 //   SensorSim always sends vz=0.0f so the sign flip has no effect.
@@ -30,11 +32,14 @@ namespace CROSSBOW_EMPLACEMENT_GUIS
     {
         // ── Configuration ─────────────────────────────────────────────────────
         /// <summary>
-        /// Port for HYPERION aLORA listener. Do NOT change to 10009 on a single
-        /// machine — HYPERION aRADAR owns that port.
+        /// HYPERION sensor input ports — 15000 block (EXT_OPS tier).
+        /// HYPERION_RADAR_PORT (15001) — primary injection target for CUE SIM.
+        /// HYPERION_LORA_PORT  (15002) — LoRa/MAVLink sensor input.
+        /// Both are safe to use simultaneously on a single machine —
+        /// no conflict with THEIA CueReceiver (15009) or HYPERION CUE output (15010).
         /// </summary>
-        public const int HYPERION_LORA_PORT  = 10032;
-        public const int HYPERION_RADAR_PORT = 10009;   // documented — do not use for TX on single machine
+        public const int HYPERION_RADAR_PORT = 15001;
+        public const int HYPERION_LORA_PORT = 15002;
 
         // ── State ─────────────────────────────────────────────────────────────
         private readonly string  _hyperionHost;
@@ -50,21 +55,21 @@ namespace CROSSBOW_EMPLACEMENT_GUIS
         // ── Constructor ───────────────────────────────────────────────────────
         /// <param name="hyperionHost">IP of machine running HYPERION (127.0.0.1 for single-machine).</param>
         /// <param name="port">
-        ///   Injection port. Defaults to HYPERION_LORA_PORT (10032).
-        ///   Override to HYPERION_RADAR_PORT (10009) only when running on separate machines.
+        ///   Injection port. Defaults to HYPERION_RADAR_PORT (15001) — HYPERION aRADAR sensor input.
+        ///   Override to HYPERION_LORA_PORT (15002) to inject via aLORA path instead.
+        ///   Both ports are safe on a single machine — no conflict with THEIA (15009).
         /// </param>
-        public SensorSim(string hyperionHost = "127.0.0.1", int port = HYPERION_LORA_PORT)
+        public SensorSim(string hyperionHost = "127.0.0.1", int port = HYPERION_RADAR_PORT)
         {
             _hyperionHost = hyperionHost;
-            _port         = port;
+            _port = port;
         }
 
         // ── Lifecycle ─────────────────────────────────────────────────────────
         public void Start()
         {
-            // Send-only socket — bind to port 0 (OS assigns ephemeral port).
-            // Receiving is not needed here; HyperionSniffer owns port 10009.
-            _udp = new UdpClient(new IPEndPoint(IPAddress.Any, 0));
+            _udp = new UdpClient();
+            _udp.Connect(_hyperionHost, _port);
             Debug.WriteLine($"[SensorSim] Ready → {_hyperionHost}:{_port}");
         }
 
@@ -119,11 +124,11 @@ namespace CROSSBOW_EMPLACEMENT_GUIS
 
         // ── Core send ─────────────────────────────────────────────────────────
         private void Send(
-            string   trackId,
+            string trackId,
             ExtOpsFrame.TrackClass trackClass,
-            ExtOpsFrame.TrackCmd   trackCmd,
-            double   lat, double lng, float altHAE,
-            float    heading, float speed, float vz)
+            ExtOpsFrame.TrackCmd trackCmd,
+            double lat, double lng, float altHAE,
+            float heading, float speed, float vz)
         {
             if (_udp == null)
             {
@@ -135,12 +140,9 @@ namespace CROSSBOW_EMPLACEMENT_GUIS
             {
                 byte[] payload = BuildPayload(trackId, trackClass, trackCmd,
                                               lat, lng, altHAE, heading, speed, vz);
-                byte[] frame   = ExtOpsFrame.BuildFrame(ExtOpsFrame.CMD_CUE_INBOUND,
+                byte[] frame = ExtOpsFrame.BuildFrame(ExtOpsFrame.CMD_CUE_INBOUND,
                                                         _seq++, payload);
-
-                var dest = new IPEndPoint(IPAddress.Parse(_hyperionHost), _port);
-                _udp.Send(frame, frame.Length, dest);
-
+                _udp.Send(frame, frame.Length);  // destination set via Connect() in Start()
                 PacketsSent++;
                 LastSentMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             }

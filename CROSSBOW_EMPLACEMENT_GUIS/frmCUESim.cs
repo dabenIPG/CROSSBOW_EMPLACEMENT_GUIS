@@ -1,13 +1,14 @@
+using CROSSBOW;
 using GMap.NET;
 using GMap.NET.WindowsForms;
 using GMap.NET.WindowsForms.Markers;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Reflection;
 using System.Windows.Forms;
-using CROSSBOW;
 
 namespace CROSSBOW_EMPLACEMENT_GUIS
 {
@@ -18,7 +19,7 @@ namespace CROSSBOW_EMPLACEMENT_GUIS
         private Bitmap? MAP_CENTER;
 
         // ── Base station ──────────────────────────────────────────────────────
-        public ptLLA BaseStation = new ptLLA(37.1246, -122.2076, 615);
+        public ptLLA BaseStation = new ptLLA(34.4593583, -86.4326550, 174.6);
 
         // ── Simulated track state ─────────────────────────────────────────────
         double angle = 90;
@@ -303,6 +304,7 @@ namespace CROSSBOW_EMPLACEMENT_GUIS
                     speed: (float)aTrackLog.Speed_mps
                 // vz = 0.0f (default) — aLORA sign-flip is a no-op at zero
                 );
+                lbl_PacketsSent.Text = $"Sent: {_sensorSim.PacketsSent}";  // ← add this
                 return;
             }
 
@@ -398,8 +400,8 @@ namespace CROSSBOW_EMPLACEMENT_GUIS
         // ─────────────────────────────────────────────────────────────────────
 
         /// <summary>
-        /// Start/stop injecting simulated track data into HYPERION via aLORA (port 10032).
-        /// HYPERION processes it through the Kalman filter and forwards to THEIA (port 10009).
+        /// Start/stop injecting simulated track data into HYPERION via aRADAR (port 15001).
+        /// HYPERION processes it through the Kalman filter and forwards to THEIA (port 15009).
         /// </summary>
         private void chk_SensorSim_CheckedChanged(object sender, EventArgs e)
         {
@@ -414,21 +416,11 @@ namespace CROSSBOW_EMPLACEMENT_GUIS
                     return;
                 }
 
-                string host = txt_TargetIP.Text.Trim();
-                bool singleMachine = host is "127.0.0.1" or "localhost";
-
-                // Single machine: inject via aLORA port 10032 — aRADAR owns 10009
-                // Separate machines: inject via aRADAR port 10009 — no conflict
-                int port = singleMachine
-                    ? SensorSim.HYPERION_LORA_PORT
-                    : SensorSim.HYPERION_RADAR_PORT;
-
-                _sensorSim = new SensorSim(host, port);
+                string host = txt_HyperionIP.Text.Trim();
+                _sensorSim = new SensorSim(host, SensorSim.HYPERION_RADAR_PORT);
                 _sensorSim.Start();
-
-                chk_SensorSim.Text = singleMachine
-                    ? $"Inject → HYPERION  port {SensorSim.HYPERION_LORA_PORT} (aLORA)"
-                    : $"Inject → HYPERION  port {SensorSim.HYPERION_RADAR_PORT} (aRADAR)";
+                Debug.WriteLine($"[SensorSim] Started → {host}:{SensorSim.HYPERION_RADAR_PORT}");
+                chk_SensorSim.Text = $"Inject → HYPERION  port {SensorSim.HYPERION_RADAR_PORT} (aRADAR)";
 
                 if (chk_EnablePattern.Checked)
                     timUDP.Enabled = true;
