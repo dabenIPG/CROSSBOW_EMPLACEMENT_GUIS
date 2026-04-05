@@ -52,6 +52,14 @@ namespace CROSSBOW_EMPLACEMENT_GUIS
         public int  PacketsSent    { get; private set; } = 0;
         public long LastSentMs     { get; private set; } = 0;
 
+        // ── Add fields ────────────────────────────────────────────────────────────
+        private Thread? _recvThread;
+        private volatile bool _running = false;
+
+        // ── Events ────────────────────────────────────────────────────────────────
+        public event Action<TheiaStatus>? StatusReceived;
+        public event Action<TheiaPosAtt>? PosAttReceived;
+
         // ── Constructor ───────────────────────────────────────────────────────
         /// <param name="hyperionHost">IP of machine running HYPERION (127.0.0.1 for single-machine).</param>
         /// <param name="port">
@@ -70,13 +78,24 @@ namespace CROSSBOW_EMPLACEMENT_GUIS
         {
             _udp = new UdpClient();
             _udp.Connect(_hyperionHost, _port);
+            _running = true;
+
+            _recvThread = new Thread(RecvThreadFunc)
+            {
+                IsBackground = true,
+                Name = "SensorSim.Recv"
+            };
+            _recvThread.Start();
+
             Debug.WriteLine($"[SensorSim] Ready → {_hyperionHost}:{_port}");
         }
 
         public void Stop()
         {
+            _running = false;
             try { _udp?.Close(); } catch { }
             _udp = null;
+            _recvThread?.Join(2000);
             Debug.WriteLine("[SensorSim] Stopped");
         }
 
@@ -204,5 +223,67 @@ namespace CROSSBOW_EMPLACEMENT_GUIS
 
             return p;
         }
+
+        // ── Receive thread ────────────────────────────────────────────────────────
+        private void RecvThreadFunc()
+        {
+            var remoteEP = new IPEndPoint(IPAddress.Any, 0);
+
+            while (_running)
+            {
+                try
+                {
+                    byte[] buf = _udp!.Receive(ref remoteEP);
+
+                    if (!ExtOpsFrame.TryParseFrame(buf, buf.Length, out var parsed))
+                        continue;
+
+                    switch (parsed.Cmd)
+                    {
+                        case ExtOpsFrame.CMD_STATUS_RESPONSE:
+                            if (parsed.PayloadLen == ExtOpsFrame.PAYLOAD_LEN_STATUS)
+                                StatusReceived?.Invoke(ParseStatus(parsed.Payload));
+                            break;
+
+                        case ExtOpsFrame.CMD_POSATT_REPORT:
+                            if (parsed.PayloadLen == ExtOpsFrame.PAYLOAD_LEN_POSATT)
+                                PosAttReceived?.Invoke(ParsePosAtt(parsed.Payload));
+                            break;
+                    }
+                }
+                catch (SocketException) { /* socket closed or timeout — loop */ }
+                catch (ObjectDisposedException) { break; }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[SensorSim] Recv error: {ex.Message}");
+                }
+            }
+        }
+
+        // ── Parsers ───────────────────────────────────────────────────────────────
+        private static TheiaStatus ParseStatus(byte[] p) => new TheiaStatus
+        {
+            SystemState = p[0],
+            SystemMode = p[1],
+            ActiveCamId = p[2],
+            MccVoteBits = p[3],
+            BdcVoteBits1 = p[4],
+            BdcVoteBits2 = p[5],
+            GimbalAzNed = ExtOpsFrame.ReadFloat(p, 6),
+            GimbalElNed = ExtOpsFrame.ReadFloat(p, 10),
+            LaserAzNed = ExtOpsFrame.ReadFloat(p, 14),
+            LaserElNed = ExtOpsFrame.ReadFloat(p, 18),
+        };
+
+        private static TheiaPosAtt ParsePosAtt(byte[] p) => new TheiaPosAtt
+        {
+            Latitude = ExtOpsFrame.ReadDouble(p, 0),
+            Longitude = ExtOpsFrame.ReadDouble(p, 8),
+            AltHAE = ExtOpsFrame.ReadFloat(p, 16),
+            Roll = ExtOpsFrame.ReadFloat(p, 20),
+            Pitch = ExtOpsFrame.ReadFloat(p, 24),
+            Yaw = ExtOpsFrame.ReadFloat(p, 28),
+        };
+
     }
 }

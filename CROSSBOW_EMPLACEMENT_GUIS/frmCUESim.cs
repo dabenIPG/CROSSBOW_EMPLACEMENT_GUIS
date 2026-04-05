@@ -418,6 +418,8 @@ namespace CROSSBOW_EMPLACEMENT_GUIS
 
                 string host = txt_HyperionIP.Text.Trim();
                 _sensorSim = new SensorSim(host, SensorSim.HYPERION_RADAR_PORT);
+                _sensorSim.StatusReceived += OnStatusReceived;   // reuse existing handler
+                _sensorSim.PosAttReceived += OnPosAttReceived;   // reuse existing handler
                 _sensorSim.Start();
                 Debug.WriteLine($"[SensorSim] Started → {host}:{SensorSim.HYPERION_RADAR_PORT}");
                 chk_SensorSim.Text = $"Inject → HYPERION  port {SensorSim.HYPERION_RADAR_PORT} (aRADAR)";
@@ -428,6 +430,8 @@ namespace CROSSBOW_EMPLACEMENT_GUIS
             else
             {
                 timUDP.Enabled = false;
+                _sensorSim.StatusReceived -= OnStatusReceived;
+                _sensorSim.PosAttReceived -= OnPosAttReceived;
                 _sensorSim?.Stop();
                 _sensorSim?.Dispose();
                 _sensorSim = null;
